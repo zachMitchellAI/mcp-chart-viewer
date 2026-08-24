@@ -13,6 +13,16 @@ bun run format
 
 This project uses strict TypeScript. Ensure all new code passes type checking before considering a task complete.
 
+### Type Error Debugging
+
+When a TS error mentions an unexpected `undefined` in a type (e.g. `Type 'X | undefined' is not assignable to type 'X'`):
+
+1. Read the source file where the type/constant is defined to rule out bad data.
+2. Check `tsconfig.json` for `noUncheckedIndexedAccess` / `exactOptionalPropertyTypes` — these flags widen types without any visible `?` in the code. `noUncheckedIndexedAccess` makes every indexed array access (`arr[i]`) return `T | undefined`, even when the index is provably in-bounds (e.g. `i % arr.length`).
+3. Grep for all usages of the type to find indexed accesses, `Record` lookups, or optional props where `undefined` could enter — error messages often don't point at the actual offending line.
+
+Fix pattern: provide a fallback (`arr[i] ?? defaultValue`) rather than weakening the type.
+
 ### Chart Types
 
 Chart.js types are barrel-exported from `utils/chart-types.interface.ts`. This file contains:
