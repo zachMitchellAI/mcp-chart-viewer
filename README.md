@@ -52,7 +52,7 @@ Possible routes that could be taken if this was worked on more:
 - [ ] localStorage support to store queries, chart data and history
 - [x] "tools called" section in the metadata
 - [ ] data verification (is this a correct shape, even though the model tried?)
-- [ ] custom theming
+- [x] custom theming
 
 # Starter queries
 

@@ -23,9 +23,9 @@
 </template>
 
 <script setup lang="ts">
-import { type Theme } from "~/utils/theme.constants";
 definePageMeta({ ssr: false });
 const chartData = useChartData();
+const route = useRoute();
 const existingTheme = ref<Theme>(
   (localStorage.getItem("theme") as "" | "dark" | "light" | null) ?? "",
 );
@@ -35,32 +35,20 @@ const onThemeChanged = (theme: Theme) => {
   localStorage.setItem("theme", theme);
 };
 
-if (!chartData.collections.length) {
-  chartData.initializeCollections([
-    {
-      name: "Wolfram Queries",
-      queriable: true,
-      entries: [],
-    },
-    {
-      name: "Static",
-      queriable: false,
-      entries: [],
-    },
-  ]);
+function applyHistoryFromRoute(): void {
+  const collectionSlug = route.query[COLLECTION_QUERY_PARAM];
+  const datasetSlug = route.query[DATASET_QUERY_PARAM];
+
+  chartData.applyHistoryState(
+    typeof collectionSlug === "string" ? collectionSlug : null,
+    typeof datasetSlug === "string" ? datasetSlug : null,
+  );
 }
 
 onMounted(async () => {
-  try {
-    const data = await $fetch<ChartDataDTO[]>("/static-chart-data.json");
-    const staticCollection = chartData.collections.find(
-      (c) => c.name === "Static",
-    );
-    if (staticCollection) {
-      staticCollection.entries = data;
-    }
-  } catch (e) {
-    console.error("Failed to load static chart data:", e);
-  }
+  await chartData.initialize();
+  applyHistoryFromRoute();
 });
+
+watch(() => route.query, applyHistoryFromRoute);
 </script>

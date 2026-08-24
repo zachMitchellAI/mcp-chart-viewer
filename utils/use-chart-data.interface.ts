@@ -13,4 +13,5 @@ export interface ChartDataState {
   collections: Collection[];
   activeDataset: ChartDataDTO | null;
   activeCollection: Collection | null;
+  initialized: boolean;
 }
