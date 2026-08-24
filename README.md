@@ -48,11 +48,13 @@ Simply inserting `!mock` in the box allows to test server calls without calling 
 Possible routes that could be taken if this was worked on more:
 
 - [x] sub-agent delegation on queries
-- [ ] plugins: gather data from other MCP sources & tools
-- [ ] localStorage support to store queries, chart data and history
+- [x] localStorage support to store queries, chart data and history
 - [x] "tools called" section in the metadata
-- [ ] data verification (is this a correct shape, even though the model tried?)
 - [x] custom theming
+- [ ] Delete previous queries
+- [ ] Copy & paste chart data from other sessions
+- [ ] plugins: gather data from other MCP sources & tools
+- [ ] data verification (is this a correct shape, even though the model tried?)
 
 # Starter queries
 
