@@ -1,5 +1,5 @@
 <template>
-  <v-sheet class="pa-5">
+  <v-sheet class="pa-0">
     <v-textarea
       :label="placeholder"
       variant="solo"

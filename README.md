@@ -51,7 +51,7 @@ Possible routes that could be taken if this was worked on more:
 - [x] localStorage support to store queries, chart data and history
 - [x] "tools called" section in the metadata
 - [x] custom theming
-- [ ] Delete previous queries
+- [x] Delete previous queries
 - [ ] Copy & paste chart data from other sessions
 - [ ] plugins: gather data from other MCP sources & tools
 - [ ] data verification (is this a correct shape, even though the model tried?)
