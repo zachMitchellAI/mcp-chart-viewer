@@ -23,11 +23,12 @@
         </v-sheet>
 
         <data-iterator
-          :items="coll?.entries"
+          :collection="coll"
           :active-dataset="chartData.activeDataset"
           @set-active-dataset="
             (dataset: ChartDataDTO) => onSelectDataset(dataset, coll)
           "
+          @delete-dataset="onDeleteDataset"
         />
       </v-tabs-window-item>
     </v-tabs-window>
@@ -52,6 +53,10 @@ function onSelectDataset(dataset: ChartDataDTO, collection: Collection): void {
   }
 
   router.push({ query: { ...route.query, ...nextQuery } });
+}
+
+function onDeleteDataset(dataset: ChartDataDTO, collection: Collection): void {
+  chartData.deleteDataset(dataset, collection);
 }
 
 watch(tab, (newTab) => {

@@ -1,6 +1,6 @@
 <template>
   <v-data-iterator
-    :items="props.items"
+    :items="props.collection.entries"
     item-value="shortenedQuery"
     :items-per-page="-1"
   >
@@ -36,8 +36,9 @@
               {{ item.raw.query }}
             </v-card-text>
 
-            <div class="px-4">
+            <div class="px-4 d-flex align-center">
               <v-switch
+                class="flex-grow-1"
                 :label="`${isExpanded(item as any) ? 'Hide' : 'Show'} details`"
                 :model-value="isExpanded(item as any)"
                 density="compact"
@@ -45,6 +46,16 @@
                 @click.stop="() => toggleExpand(item as any)"
               >
               </v-switch>
+              <v-icon-btn
+                v-if="!item.raw.loading && props.collection.queriable"
+                class="align-self-start"
+                icon="mdi-delete"
+                color="error"
+                @click.stop="
+                  () =>
+                    props.onDeleteDataset?.(item.raw as any, props.collection)
+                "
+              ></v-icon-btn>
             </div>
 
             <v-divider></v-divider>
@@ -80,14 +91,15 @@
 
 <script setup lang="ts">
 export interface DataIteratorProps {
-  items: (ChartDataDTO | ChartDataSkeleton)[];
+  collection: Collection;
   activeDataset: ChartDataDTO | null;
   onSetActiveDataset: (dataset: ChartDataDTO) => void;
+  onDeleteDataset: (dataset: ChartDataDTO, collection: Collection) => void;
 }
 
 const props = withDefaults(defineProps<DataIteratorProps>(), {
-  items: () => [],
   activeDataset: null,
   onSetActiveDataset: () => {},
+  onDeleteDataset: () => {},
 });
 </script>

@@ -182,5 +182,22 @@ export const useChartData = defineStore("chart-data", {
         [DATASET_QUERY_PARAM]: slugify(dataset.shortenedQuery),
       };
     },
+
+    deleteDataset(dataset: ChartDataDTO, collection: Collection) {
+      if (!collection.queriable) return false;
+
+      const index = collection.entries.findIndex(
+        (entry): entry is ChartDataDTO => !entry.loading && entry === dataset,
+      );
+      if (index === -1) return false;
+
+      collection.entries.splice(index, 1);
+      this.persistWolframEntries();
+
+      if (this.activeDataset === dataset) {
+        this.setActiveDataset(null);
+      }
+      return true;
+    },
   },
 });
