@@ -47,9 +47,23 @@
               >
               </v-switch>
               <v-icon-btn
+                v-ripple
+                class="align-self-start"
+                :icon="
+                  checkCacheMap.get(item.raw)
+                    ? 'mdi-check-circle-outline'
+                    : 'mdi-content-copy'
+                "
+                variant="plain"
+                :color="checkCacheMap.get(item.raw) ? 'success' : ''"
+                @click.stop="() => copyToClipboard(item.raw as ChartDataDTO)"
+              ></v-icon-btn>
+              <v-icon-btn
                 v-if="!item.raw.loading && props.collection.queriable"
+                v-ripple
                 class="align-self-start"
                 icon="mdi-delete"
+                variant="plain"
                 color="error"
                 @click.stop="
                   () =>
@@ -97,9 +111,38 @@ export interface DataIteratorProps {
   onDeleteDataset: (dataset: ChartDataDTO, collection: Collection) => void;
 }
 
+const checkCacheMap = ref(new Map<ChartDataDTO, NodeJS.Timeout>());
+
 const props = withDefaults(defineProps<DataIteratorProps>(), {
   activeDataset: null,
   onSetActiveDataset: () => {},
   onDeleteDataset: () => {},
 });
+
+function toggleTimeoutCopyBtnToCheck(entry: ChartDataDTO) {
+  const prevValue: NodeJS.Timeout | undefined = checkCacheMap.value.get(entry);
+
+  if (prevValue !== undefined) {
+    clearTimeout(prevValue);
+    checkCacheMap.value.delete(entry);
+  }
+
+  checkCacheMap.value.set(
+    entry,
+    setTimeout(() => {
+      checkCacheMap.value.delete(entry);
+    }, 2000),
+  );
+}
+
+function copyToClipboard(entry: ChartDataDTO) {
+  try {
+    navigator.clipboard.writeText(
+      "```json\n" + JSON.stringify(entry, null, 4) + "\n```",
+    );
+    toggleTimeoutCopyBtnToCheck(entry);
+  } catch (e) {
+    console.error("Could not write to clipboard!", e);
+  }
+}
 </script>

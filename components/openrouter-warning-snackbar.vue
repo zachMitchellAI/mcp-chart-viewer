@@ -19,7 +19,7 @@ span {
     rounded="pill"
     variant="tonal"
   >
-    <template v-slot="actions">
+    <template>
       <p>
         <span
           >Hey! This app needs an openrouter api key to run. Grab one by

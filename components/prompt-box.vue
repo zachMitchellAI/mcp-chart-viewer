@@ -20,27 +20,46 @@ export interface PromptBoxProps {
 }
 
 const props = withDefaults(defineProps<PromptBoxProps>(), {
-  placeholder: "I'm an AI with an MCP server! Ask me in plain english!",
+  placeholder: "Ask me! / Paste Chart JSON!",
 });
 
 const chartData = useChartData();
 const query = ref("");
 const boxDisabled = ref(false);
 
-async function submit(): Promise<void> {
-  if (boxDisabled.value || !query.value.trim()) return;
+async function submit(evt: Event): Promise<void> {
+  let finishedDataset;
+  if (boxDisabled.value || !query.value.trim()) {
+    // Don't submit anything, don't hit enter!
+    evt.preventDefault();
+    query.value = "";
+    return;
+  }
 
   boxDisabled.value = true;
 
-  const finishedDataset = await chartData.queryNewDataset(query.value);
+  if (/```json/.test(query.value)) {
+    // This is JSON... parse it!
+    try {
+      const parsedDataset = JSON.parse(
+        query.value.replace("```json", "").replace("```", ""),
+      );
 
-  query.value = "";
+      finishedDataset = chartData.directlyAddNewDataset(parsedDataset);
+    } catch (e) {
+      alert("Failed to parse dataset! Malformed JSON");
+      console.error("Failed to parse dataset!", e);
+    }
+  } else {
+    finishedDataset = await chartData.queryNewDataset(query.value);
+  }
 
   if (finishedDataset) {
     chartData.setActiveDataset(finishedDataset);
     console.log("active dataset", chartData.activeDataset);
   }
 
+  query.value = "";
   boxDisabled.value = false;
 }
 </script>

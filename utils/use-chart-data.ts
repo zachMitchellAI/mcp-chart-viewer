@@ -130,7 +130,6 @@ export const useChartData = defineStore("chart-data", {
 
       // @ts-ignore
       if (!data["message"]) {
-        // console.log(data);
         // Our data is ready & ripe for the taking:
         this.activeCollection?.entries.pop();
         this.activeCollection?.entries.push(data);
@@ -141,6 +140,13 @@ export const useChartData = defineStore("chart-data", {
       // Error case: remove skeleton and return null so caller doesn't set active dataset
       this.activeCollection?.entries.pop();
       return null;
+    },
+
+    directlyAddNewDataset(dataset: ChartDataDTO): ChartDataDTO {
+      this.activeCollection?.entries.push(dataset);
+      this.persistWolframEntries();
+
+      return dataset;
     },
 
     initializeCollections(newCollections: Collection[]) {
