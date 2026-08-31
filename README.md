@@ -52,7 +52,7 @@ Possible routes that could be taken if this was worked on more:
 - [x] "tools called" section in the metadata
 - [x] custom theming
 - [x] Delete previous queries
-- [ ] Copy & paste chart data from other sessions
+- [x] Copy & paste chart data from other sessions
 - [ ] plugins: gather data from other MCP sources & tools
 - [ ] data verification (is this a correct shape, even though the model tried?)
 
