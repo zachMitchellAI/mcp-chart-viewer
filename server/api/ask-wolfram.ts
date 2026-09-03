@@ -1,15 +1,11 @@
-import { createWolframAgent } from "../../utils/wolfram-agent.ts";
-import type { DeepAgent } from "deepagents";
+import { getAgent } from "../utils/agent-store";
 import mockJson from "../../public/static-chart-data.json";
 
 const filteredMock = mockJson.filter((e) => !e.loading);
-let generatedAgent: DeepAgent;
 
 export default defineEventHandler(async (event) => {
-  // Create the agent:
-  if (!generatedAgent) {
-    generatedAgent = await createWolframAgent();
-  }
+  // Create the agent (or reuse the cached one):
+  const generatedAgent = await getAgent();
   const query = new URL(
     "https://example.com" + event.node.req.url,
   ).searchParams.get("q");

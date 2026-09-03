@@ -5,7 +5,7 @@
   margin-bottom: 1em;
 }
 
-.theme-btn {
+.bar-btn {
   margin-right: 1em;
 }
 </style>
@@ -13,12 +13,22 @@
 <template>
   <v-app-bar class="bar" :title="computedTitle">
     <v-icon-btn
-      class="theme-btn"
+      class="bar-btn"
       :icon="THEME_ICONS[theme]"
       @click="themeBtnClick"
     >
     </v-icon-btn>
+    <v-icon-btn
+      id="settings-button"
+      class="bar-btn"
+      icon="mdi-cog-outline"
+      @click="openSettingsModal"
+    >
+    </v-icon-btn>
   </v-app-bar>
+
+  <!-- Settings modal -->
+  <settings-modal v-model:is-open="settingsOpened" />
 </template>
 
 <script setup lang="ts">
@@ -33,6 +43,7 @@ const props = withDefaults(defineProps<AppTitleBarProps>(), {
 });
 
 const theme = ref<Theme>(props.existingTheme);
+const settingsOpened = ref(false);
 
 const computedTitle = computed(() => {
   const base = "Wolfram Chart Viewer";
@@ -46,5 +57,9 @@ function themeBtnClick() {
   const nextTheme = THEMES[nextIndex] ?? "";
   theme.value = nextTheme;
   props.onthemeChanged?.(nextTheme);
+}
+
+function openSettingsModal() {
+  settingsOpened.value = true;
 }
 </script>

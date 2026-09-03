@@ -42,6 +42,15 @@ export async function createWolframAgent(): Promise<DeepAgent> {
     },
   });
 
+  let wolframTools: Awaited<ReturnType<typeof wolfram.getTools>> | undefined;
+
+  async function getWolframTools() {
+    if (!wolframTools) {
+      wolframTools = await wolfram.getTools();
+    }
+    return wolframTools;
+  }
+
   console.warn(
     "using:",
     settings?.CHART_MODEL,
@@ -67,7 +76,7 @@ export async function createWolframAgent(): Promise<DeepAgent> {
       name: "wolfram-agent",
       description: "Run wolfram queries based on user requests",
       model: settings?.CHART_SUBAGENT,
-      tools: await wolfram.getTools(),
+      tools: await getWolframTools(),
       systemPrompt: WOLFRAM_SUBAGENT_PROMPT,
     } as SubAgent);
   } catch (e) {
