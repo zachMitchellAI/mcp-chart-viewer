@@ -6,6 +6,9 @@ export default defineNuxtConfig({
   ssr: false,
   typescript: {
     typeCheck: true,
+    tsConfig: {
+      exclude: ["../drizzle-example"],
+    },
   },
   build: {
     transpile: ["zod"],

@@ -26,3 +26,5 @@ notes.md
 .env
 
 docs/explainers/*
+drizzle
+*.db

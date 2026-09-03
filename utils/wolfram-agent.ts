@@ -1,10 +1,10 @@
 import { createDeepAgent, type DeepAgent, type SubAgent } from "deepagents";
-import { env } from "node:process";
 import { MultiServerMCPClient } from "@langchain/mcp-adapters";
 import { ChatOpenRouter } from "@langchain/openrouter";
 import { providerStrategy, toolStrategy } from "langchain";
 import { ChartDataDTOSchema, createChartDataDTOSchema } from "./chart-schemas";
 import { CHART_TYPES, type ChartTypeLiteral } from "./chart-types.interface";
+import { getSettings } from "../server/db/get-settings";
 import {
   CHART_TYPE_GUIDANCE,
   CHART_FORMATTER_BASE_PROMPT,
@@ -12,7 +12,10 @@ import {
   WOLFRAM_SUBAGENT_PROMPT,
 } from "./wolfram-agent.constants";
 
-function createChartFormatterSubAgent(type: ChartTypeLiteral): SubAgent {
+function createChartFormatterSubAgent(
+  type: ChartTypeLiteral,
+  subagentModel: string | undefined,
+): SubAgent {
   const prompt = CHART_FORMATTER_BASE_PROMPT.replace("{TYPE}", type).replace(
     "{GUIDANCE}",
     CHART_TYPE_GUIDANCE[type],
@@ -21,7 +24,7 @@ function createChartFormatterSubAgent(type: ChartTypeLiteral): SubAgent {
   return {
     name: `${type}-formatter`,
     description: `Format data as ${type} chart`,
-    model: env["CHART_SUBAGENT"],
+    model: subagentModel,
     systemPrompt: prompt,
     responseFormat: toolStrategy<typeof schema>(schema, {
       handleError: true,
@@ -30,6 +33,8 @@ function createChartFormatterSubAgent(type: ChartTypeLiteral): SubAgent {
 }
 
 export async function createWolframAgent(): Promise<DeepAgent> {
+  const settings = await getSettings();
+
   const wolfram = new MultiServerMCPClient({
     wolfram: {
       transport: "http",
@@ -37,10 +42,40 @@ export async function createWolframAgent(): Promise<DeepAgent> {
     },
   });
 
-  console.warn("using:", env["CHART_MODEL"]);
-  const model = new ChatOpenRouter(env["CHART_MODEL"] || "z-ai/glm-5.2");
+  console.warn(
+    "using:",
+    settings?.CHART_MODEL,
+    "and",
+    settings?.CHART_SUBAGENT,
+  );
+  const model = new ChatOpenRouter({
+    model: settings?.CHART_MODEL || "z-ai/glm-5.3-flash",
+    apiKey: settings?.OPENROUTER_API_KEY,
+  });
 
-  const chartFormatters = CHART_TYPES.map(createChartFormatterSubAgent);
+  const chartFormatters = CHART_TYPES.map((type) =>
+    createChartFormatterSubAgent(
+      type,
+      settings?.CHART_SUBAGENT || "google/gemma-4-31b-it",
+    ),
+  );
+
+  const subagents = [...chartFormatters];
+
+  try {
+    subagents.push({
+      name: "wolfram-agent",
+      description: "Run wolfram queries based on user requests",
+      model: settings?.CHART_SUBAGENT,
+      tools: await wolfram.getTools(),
+      systemPrompt: WOLFRAM_SUBAGENT_PROMPT,
+    } as SubAgent);
+  } catch (e) {
+    console.error(
+      "Wolfram server failed to connect; unable to add-in the subagent until that works",
+      e,
+    );
+  }
 
   const agent = createDeepAgent({
     model,
@@ -53,16 +88,7 @@ export async function createWolframAgent(): Promise<DeepAgent> {
       },
     ],
     responseFormat: providerStrategy(ChartDataDTOSchema),
-    subagents: [
-      {
-        name: "wolfram-agent",
-        description: "Run wolfram queries based on user requests",
-        model: env["CHART_SUBAGENT"],
-        tools: await wolfram.getTools(),
-        systemPrompt: WOLFRAM_SUBAGENT_PROMPT,
-      } as SubAgent,
-      ...chartFormatters,
-    ],
+    subagents,
   });
 
   return agent;
