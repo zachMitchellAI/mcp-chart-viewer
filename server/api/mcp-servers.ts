@@ -7,6 +7,7 @@ import type { McpServerInput } from "../../utils/db/db.interface";
 const envSchema = z
   .string()
   .transform((val, ctx) => {
+    if (val.trim() === "") return null;
     try {
       return JSON.parse(val) as unknown;
     } catch {
@@ -17,8 +18,12 @@ const envSchema = z
       return z.NEVER;
     }
   })
-  .pipe(z.record(z.string(), z.string()))
-  .transform((env) => JSON.stringify(env));
+  .pipe(
+    z.union([
+      z.record(z.string(), z.string()).transform((env) => JSON.stringify(env)),
+      z.null(),
+    ]),
+  );
 
 const baseFields = {
   name: z.string().min(1),
