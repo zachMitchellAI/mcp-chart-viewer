@@ -2,6 +2,7 @@ import { z } from "zod";
 import { getMcpServers } from "../db/get-mcp-servers";
 import { addMcpServer } from "../db/add-mcp-server";
 import { setMcpServer } from "../db/set-mcp-server";
+import { deleteMcpServer } from "../db/delete-mcp-server";
 import type { McpServerInput } from "../../utils/db/db.interface";
 
 const envSchema = z
@@ -56,6 +57,10 @@ const updateServerSchema = z.discriminatedUnion("isRemote", [
 
 type ServerPayload = z.output<typeof addServerSchema>;
 
+const deleteServerSchema = z.object({
+  id: z.number().int().positive(),
+});
+
 function toInput(server: ServerPayload): McpServerInput {
   return {
     name: server.name,
@@ -103,6 +108,23 @@ export default defineEventHandler(async (event) => {
     const { id, ...rest } = parsed.data;
     const updated = await setMcpServer(id, toInput(rest));
     if (!updated) {
+      throw createError({
+        statusCode: 404,
+        statusMessage: "MCP server not found",
+      });
+    }
+    return { ok: true };
+  }
+
+  if (event.method === "DELETE") {
+    const parsed = deleteServerSchema.safeParse(body);
+    if (!parsed.success) {
+      badRequest(
+        `Invalid MCP server id: ${parsed.error.issues.map((i) => i.message).join("; ")}`,
+      );
+    }
+    const deleted = await deleteMcpServer(parsed.data.id);
+    if (!deleted) {
       throw createError({
         statusCode: 404,
         statusMessage: "MCP server not found",
