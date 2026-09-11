@@ -5,7 +5,7 @@ import {
   CONFIG_KEY_SETTINGS,
   CONFIG_TYPE_SETTINGS,
 } from "../../utils/db/db.constants";
-import { rebuildAgent } from "../utils/agent-store";
+import { invalidateAgents } from "../utils/agent-store";
 import type { SettingsValue } from "../../utils/db/db.interface";
 
 export async function setSettings(value: SettingsValue): Promise<boolean> {
@@ -15,7 +15,7 @@ export async function setSettings(value: SettingsValue): Promise<boolean> {
     .where(eq(config.key, CONFIG_KEY_SETTINGS));
   const updated = result.changes > 0;
   if (updated) {
-    rebuildAgent();
+    invalidateAgents();
   }
   return updated;
 }

@@ -11,6 +11,7 @@ export type McpServerValue = {
   url: string | null;
   command: string | null;
   env: string | null;
+  agentInstructions: string | null;
 };
 
 export type McpServerInput = Omit<McpServerValue, "id">;

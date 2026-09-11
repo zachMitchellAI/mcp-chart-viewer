@@ -14,4 +14,5 @@ export interface ChartDataState {
   activeDataset: ChartDataDTO | null;
   activeCollection: Collection | null;
   initialized: boolean;
+  wolframServerId: number | null;
 }

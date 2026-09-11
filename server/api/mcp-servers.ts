@@ -3,6 +3,8 @@ import { getMcpServers } from "../db/get-mcp-servers";
 import { addMcpServer } from "../db/add-mcp-server";
 import { setMcpServer } from "../db/set-mcp-server";
 import { deleteMcpServer } from "../db/delete-mcp-server";
+import { invalidateAgents } from "../utils/agent-store";
+import { invalidateMcpServer } from "../utils/mcp-store";
 import type { McpServerInput } from "../../utils/db/db.interface";
 
 const envSchema = z
@@ -29,6 +31,7 @@ const envSchema = z
 const baseFields = {
   name: z.string().min(1),
   env: envSchema.nullish(),
+  agentInstructions: z.string().nullish(),
 };
 
 const remoteServerSchema = z.object({
@@ -68,6 +71,7 @@ function toInput(server: ServerPayload): McpServerInput {
     url: server.url ?? null,
     command: server.command ?? null,
     env: server.env ?? null,
+    agentInstructions: server.agentInstructions ?? null,
   };
 }
 
@@ -113,6 +117,8 @@ export default defineEventHandler(async (event) => {
         statusMessage: "MCP server not found",
       });
     }
+    invalidateMcpServer(id);
+    invalidateAgents();
     return { ok: true };
   }
 
@@ -130,6 +136,8 @@ export default defineEventHandler(async (event) => {
         statusMessage: "MCP server not found",
       });
     }
+    invalidateMcpServer(parsed.data.id);
+    invalidateAgents();
     return { ok: true };
   }
 

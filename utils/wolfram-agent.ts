@@ -1,16 +1,15 @@
 import { createDeepAgent, type DeepAgent, type SubAgent } from "deepagents";
-import { MultiServerMCPClient } from "@langchain/mcp-adapters";
 import { ChatOpenRouter } from "@langchain/openrouter";
 import { providerStrategy, toolStrategy } from "langchain";
 import { ChartDataDTOSchema, createChartDataDTOSchema } from "./chart-schemas";
 import { CHART_TYPES, type ChartTypeLiteral } from "./chart-types.interface";
-import { getSettings } from "../server/db/get-settings";
 import {
   CHART_TYPE_GUIDANCE,
   CHART_FORMATTER_BASE_PROMPT,
   WOLFRAM_DELEGATOR_PROMPT,
   WOLFRAM_SUBAGENT_PROMPT,
 } from "./wolfram-agent.constants";
+import type { AgentDeps } from "../server/utils/agent-store.interface";
 
 function createChartFormatterSubAgent(
   type: ChartTypeLiteral,
@@ -32,24 +31,18 @@ function createChartFormatterSubAgent(
   };
 }
 
-export async function createWolframAgent(): Promise<DeepAgent> {
-  const settings = await getSettings();
+function buildSubagentSystemPrompt(deps: AgentDeps): string {
+  const instructions = deps.servers
+    .map((server) => server.instructions?.trim())
+    .filter((instructions): instructions is string => Boolean(instructions));
 
-  const wolfram = new MultiServerMCPClient({
-    wolfram: {
-      transport: "http",
-      url: "https://agenttools.wolfram.com/mcp",
-    },
-  });
+  if (instructions.length === 0) return WOLFRAM_SUBAGENT_PROMPT;
 
-  let wolframTools: Awaited<ReturnType<typeof wolfram.getTools>> | undefined;
+  return `${WOLFRAM_SUBAGENT_PROMPT}\n\n${instructions.join("\n\n")}`;
+}
 
-  async function getWolframTools() {
-    if (!wolframTools) {
-      wolframTools = await wolfram.getTools();
-    }
-    return wolframTools;
-  }
+export async function createAgent(deps: AgentDeps): Promise<DeepAgent> {
+  const { settings } = deps;
 
   console.warn(
     "using:",
@@ -69,21 +62,19 @@ export async function createWolframAgent(): Promise<DeepAgent> {
     ),
   );
 
-  const subagents = [...chartFormatters];
+  const subagents: SubAgent[] = [...chartFormatters];
 
-  try {
+  const tools = deps.servers.flatMap((server) => server.tools);
+  if (tools.length > 0) {
     subagents.push({
       name: "wolfram-agent",
-      description: "Run wolfram queries based on user requests",
+      description: "Run data-gathering queries based on user requests",
       model: settings?.CHART_SUBAGENT,
-      tools: await getWolframTools(),
-      systemPrompt: WOLFRAM_SUBAGENT_PROMPT,
+      tools,
+      systemPrompt: buildSubagentSystemPrompt(deps),
     } as SubAgent);
-  } catch (e) {
-    console.error(
-      "Wolfram server failed to connect; unable to add-in the subagent until that works",
-      e,
-    );
+  } else {
+    console.warn("no MCP tools connected; agent built without data subagent");
   }
 
   const agent = createDeepAgent({

@@ -1,28 +1,60 @@
+import { z } from "zod";
 import { getAgent } from "../utils/agent-store";
+import { resolveMcpServers } from "../utils/mcp-store";
 import mockJson from "../../public/static-chart-data.json";
 
 const filteredMock = mockJson.filter((e) => !e.loading);
 
-export default defineEventHandler(async (event) => {
-  // Create the agent (or reuse the cached one):
-  const generatedAgent = await getAgent();
-  const query = new URL(
-    "https://example.com" + event.node.req.url,
-  ).searchParams.get("q");
+const askWolframSchema = z.object({
+  query: z.string().min(1),
+  mcpServerIds: z
+    .array(z.number().int().positive())
+    .default([])
+    .transform((ids) => [...new Set(ids)]),
+});
 
-  if (!query) {
+export default defineEventHandler(async (event) => {
+  if (event.method !== "POST") {
+    throw createError({
+      statusCode: 405,
+      statusMessage: "Method not allowed; POST { query, mcpServerIds }",
+    });
+  }
+
+  const body = await readBody<unknown>(event);
+  const parsed = askWolframSchema.safeParse(body);
+  if (!parsed.success) {
     event.node.res.statusCode = 400;
     return {
-      message: "invalid query! use ?q=my query is this!",
+      message: `invalid request body: ${parsed.error.issues
+        .map((i) => i.message)
+        .join("; ")}`,
     };
   }
 
-  console.log("query:", query);
+  const { query, mcpServerIds } = parsed.data;
+
+  console.log("query:", query, "| mcpServerIds:", mcpServerIds);
 
   // Mock the response given the query is `!mock`
   if (query === "!mock") {
     return filteredMock[Math.floor(Math.random() * filteredMock.length)];
   }
+
+  const connectedServers = (await resolveMcpServers(mcpServerIds)).map(
+    (server) => server.id,
+  );
+
+  if (mcpServerIds.length > 0 && connectedServers.length === 0) {
+    event.node.res.statusCode = 502;
+    return {
+      message:
+        "none of the requested MCP servers could be reached; no agent was built",
+    };
+  }
+
+  // Create the agent (or reuse the cached one):
+  const generatedAgent = await getAgent(connectedServers);
 
   // In a production environment, we'd need to sanitize this input for things like prompt-jacking.
   try {

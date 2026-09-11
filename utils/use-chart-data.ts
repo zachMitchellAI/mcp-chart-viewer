@@ -12,6 +12,7 @@ import {
   WOLFRAM_COLLECTION_NAME,
   WOLFRAM_STORAGE_KEY,
 } from "./history.constants";
+import { WOLFRAM_MCP_SERVER_NAME } from "./db/db.constants";
 import { slugify } from "./slugify";
 
 export const useChartData = defineStore("chart-data", {
@@ -21,6 +22,7 @@ export const useChartData = defineStore("chart-data", {
       activeCollection: null,
       activeDataset: null,
       initialized: false,
+      wolframServerId: null,
     } as ChartDataState;
 
     if (stateDraft.collections[0]) {
@@ -56,6 +58,26 @@ export const useChartData = defineStore("chart-data", {
       ]);
 
       await this.loadStaticEntries();
+      await this.loadWolframServerId();
+    },
+
+    async loadWolframServerId() {
+      try {
+        const servers =
+          await $fetch<Array<{ id: number; name: string }>>("/api/mcp-servers");
+        const wolfram = servers.find(
+          (server) => server.name === WOLFRAM_MCP_SERVER_NAME,
+        );
+        if (!wolfram) {
+          console.warn(
+            "no wolfram MCP server found; queries will have no tools",
+          );
+          return;
+        }
+        this.wolframServerId = wolfram.id;
+      } catch (e) {
+        console.error("failed to load MCP server list:", e);
+      }
     },
 
     loadWolframEntries(): ChartDataDTO[] {
@@ -123,9 +145,15 @@ export const useChartData = defineStore("chart-data", {
 
       this.activeCollection?.entries.push(skeletonDataset);
 
-      const response = await fetch(
-        `/api/ask-wolfram?q=${encodeURIComponent(query)}`,
-      );
+      const response = await fetch("/api/ask-wolfram", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          query,
+          mcpServerIds:
+            this.wolframServerId !== null ? [this.wolframServerId] : [],
+        }),
+      });
       const data = JSON.parse(await response.text());
 
       // @ts-ignore

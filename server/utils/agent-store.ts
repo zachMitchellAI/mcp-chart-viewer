@@ -1,34 +1,57 @@
 import type { DeepAgent } from "deepagents";
-import { createWolframAgent } from "../../utils/wolfram-agent";
+import { createAgent } from "../../utils/wolfram-agent";
+import { getSettings } from "../db/get-settings";
+import type { AgentCacheEntry, AgentDeps } from "./agent-store.interface";
+import { resolveMcpServers } from "./mcp-store";
 
-let cachedAgent: DeepAgent | undefined;
-let buildPromise: Promise<DeepAgent> | undefined;
+const agentCache = new Map<string, AgentCacheEntry>();
 
-async function buildAgent(): Promise<DeepAgent> {
+function cacheKeyFor(ids: number[]): string {
+  return JSON.stringify([...ids].sort((a, b) => a - b));
+}
+
+export async function getAgent(ids: number[]): Promise<DeepAgent> {
+  const key = cacheKeyFor(ids);
+  const cached = agentCache.get(key);
+  if (cached?.agent) {
+    return cached.agent;
+  }
+
+  const servers = await resolveMcpServers(ids);
+  const settings = await getSettings();
+
+  const entry: AgentCacheEntry = cached ?? {
+    agent: undefined,
+    buildPromise: undefined,
+  };
+  agentCache.set(key, entry);
+
+  entry.buildPromise ??= buildAgent(entry, { servers, settings });
+  return entry.buildPromise;
+}
+
+async function buildAgent(
+  entry: AgentCacheEntry,
+  deps: AgentDeps,
+): Promise<DeepAgent> {
+  const key = cacheKeyFor(deps.servers.map((server) => server.id));
   try {
-    const agent = await createWolframAgent();
-    cachedAgent = agent;
+    const agent = await createAgent(deps);
+    entry.agent = agent;
     return agent;
   } catch (error) {
-    cachedAgent = undefined;
-    console.error("Failed to build wolfram agent", error);
+    agentCache.delete(key);
+    console.error("failed to build agent", key, error);
     throw error;
   } finally {
-    buildPromise = undefined;
+    entry.buildPromise = undefined;
   }
 }
 
-export async function getAgent(): Promise<DeepAgent> {
-  if (cachedAgent) {
-    return cachedAgent;
-  }
-  buildPromise ??= buildAgent();
-  return buildPromise;
+export function invalidateAgents(): void {
+  agentCache.clear();
 }
 
-export function rebuildAgent(): void {
-  console.log("settings updated; rebuilding wolfram agent");
-  cachedAgent = undefined;
-  buildPromise ??= buildAgent();
-  buildPromise.catch(() => undefined);
+export function invalidateAgent(ids: number[]): void {
+  agentCache.delete(cacheKeyFor(ids));
 }
