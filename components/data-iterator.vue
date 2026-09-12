@@ -59,7 +59,7 @@
                 @click.stop="() => copyToClipboard(item.raw as ChartDataDTO)"
               ></v-icon-btn>
               <v-icon-btn
-                v-if="!item.raw.loading && props.collection.queriable"
+                v-if="!item.raw.loading"
                 v-ripple
                 class="align-self-start"
                 icon="mdi-delete"

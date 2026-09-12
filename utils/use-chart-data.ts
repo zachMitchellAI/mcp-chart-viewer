@@ -3,17 +3,49 @@ import type {
   Collection,
   ChartDataState,
   ChartDataSkeleton,
+  TabConfig,
 } from "./use-chart-data.interface";
 import { type ChartDataDTO, AnyChartDataDTOSchema } from "./chart-schemas";
 import {
   COLLECTION_QUERY_PARAM,
   DATASET_QUERY_PARAM,
-  STATIC_COLLECTION_NAME,
+  LEGACY_WOLFRAM_STORAGE_KEY,
+  TAB_ENTRIES_STORAGE_KEY,
+  TAB_STORAGE_KEY,
   WOLFRAM_COLLECTION_NAME,
-  WOLFRAM_STORAGE_KEY,
 } from "./history.constants";
 import { WOLFRAM_MCP_SERVER_NAME } from "./db/db.constants";
 import { slugify } from "./slugify";
+
+function parseEntries(raw: unknown): ChartDataDTO[] {
+  if (!Array.isArray(raw)) return [];
+
+  const entries: ChartDataDTO[] = [];
+  for (const entry of raw) {
+    const result = AnyChartDataDTOSchema.safeParse(entry);
+    if (result.success) {
+      entries.push({
+        ...(result.data as Record<string, unknown>),
+        loading: false,
+      } as ChartDataDTO);
+    } else {
+      console.warn("Discarding invalid stored dataset:", result.error);
+    }
+  }
+  return entries;
+}
+
+function readJsonFromStorage(key: string): unknown {
+  const raw = localStorage.getItem(key);
+  if (!raw) return null;
+
+  try {
+    return JSON.parse(raw);
+  } catch (e) {
+    console.error(`Failed to parse stored data for "${key}":`, e);
+    return null;
+  }
+}
 
 export const useChartData = defineStore("chart-data", {
   state: () => {
@@ -44,21 +76,8 @@ export const useChartData = defineStore("chart-data", {
       if (this.initialized) return;
       this.initialized = true;
 
-      this.initializeCollections([
-        {
-          name: WOLFRAM_COLLECTION_NAME,
-          queriable: true,
-          entries: this.loadWolframEntries(),
-        },
-        {
-          name: STATIC_COLLECTION_NAME,
-          queriable: false,
-          entries: [],
-        },
-      ]);
-
-      await this.loadStaticEntries();
       await this.loadWolframServerId();
+      this.loadTabs();
     },
 
     async loadWolframServerId() {
@@ -80,61 +99,177 @@ export const useChartData = defineStore("chart-data", {
       }
     },
 
-    loadWolframEntries(): ChartDataDTO[] {
-      const raw = localStorage.getItem(WOLFRAM_STORAGE_KEY);
-      if (!raw) return [];
+    loadTabs() {
+      const storedConfigs = readJsonFromStorage(TAB_STORAGE_KEY);
 
-      try {
-        const parsed: unknown = JSON.parse(raw);
-        if (!Array.isArray(parsed)) return [];
-
-        const entries: ChartDataDTO[] = [];
-        for (const entry of parsed) {
-          const result = AnyChartDataDTOSchema.safeParse(entry);
-          if (result.success) {
-            entries.push({
-              ...(result.data as Record<string, unknown>),
-              loading: false,
-            } as ChartDataDTO);
-          } else {
-            console.warn("Discarding invalid stored dataset:", result.error);
-          }
-        }
-        return entries;
-      } catch (e) {
-        console.error("Failed to parse stored wolfram queries:", e);
-        return [];
-      }
-    },
-
-    async loadStaticEntries() {
-      try {
-        const data = await $fetch<ChartDataDTO[]>("/static-chart-data.json");
-        const staticCollection = this.collections.find(
-          (c) => c.name === STATIC_COLLECTION_NAME,
+      if (Array.isArray(storedConfigs) && storedConfigs.length > 0) {
+        const entriesRecord = this.loadTabEntries();
+        const configs = storedConfigs.filter(
+          (config): config is TabConfig =>
+            typeof config === "object" &&
+            config !== null &&
+            typeof (config as TabConfig).id === "string" &&
+            typeof (config as TabConfig).name === "string" &&
+            Array.isArray((config as TabConfig).mcpServerIds),
         );
-        if (staticCollection) {
-          staticCollection.entries = data;
-        }
-      } catch (e) {
-        console.error("Failed to load static chart data:", e);
+        this.initializeCollections(
+          configs.map((config) => ({
+            ...config,
+            entries: entriesRecord[config.id] ?? [],
+          })),
+        );
+        return;
       }
+
+      // First run (or pre-custom-tabs data): migrate legacy wolfram entries
+      // into a default tab with the wolfram server enabled.
+      this.createDefaultCollection(
+        parseEntries(readJsonFromStorage(LEGACY_WOLFRAM_STORAGE_KEY)),
+      );
+      localStorage.removeItem(LEGACY_WOLFRAM_STORAGE_KEY);
     },
 
-    persistWolframEntries() {
-      const wolframCollection = this.collections.find(
-        (c) => c.name === WOLFRAM_COLLECTION_NAME,
-      );
-      if (!wolframCollection) return;
+    createDefaultCollection(entries: ChartDataDTO[]): Collection {
+      const collection: Collection = {
+        id: slugify(WOLFRAM_COLLECTION_NAME),
+        name: WOLFRAM_COLLECTION_NAME,
+        mcpServerIds:
+          this.wolframServerId !== null ? [this.wolframServerId] : [],
+        entries,
+      };
 
-      const persistable = wolframCollection.entries
+      this.initializeCollections([collection]);
+      this.persistCollections();
+      this.persistEntries(collection);
+
+      return collection;
+    },
+
+    loadTabEntries(): Record<string, ChartDataDTO[]> {
+      const stored = readJsonFromStorage(TAB_ENTRIES_STORAGE_KEY);
+      if (
+        typeof stored !== "object" ||
+        stored === null ||
+        Array.isArray(stored)
+      ) {
+        return {};
+      }
+
+      const entriesRecord: Record<string, ChartDataDTO[]> = {};
+      for (const [id, rawEntries] of Object.entries(stored)) {
+        entriesRecord[id] = parseEntries(rawEntries);
+      }
+      return entriesRecord;
+    },
+
+    persistCollections() {
+      const configs: TabConfig[] = this.collections.map((collection) => ({
+        id: collection.id,
+        name: collection.name,
+        mcpServerIds: collection.mcpServerIds,
+      }));
+      localStorage.setItem(TAB_STORAGE_KEY, JSON.stringify(configs));
+    },
+
+    persistEntries(collection: Collection | null) {
+      if (!collection) return;
+
+      const stored = readJsonFromStorage(TAB_ENTRIES_STORAGE_KEY);
+      const entriesRecord =
+        typeof stored === "object" && stored !== null && !Array.isArray(stored)
+          ? (stored as Record<string, unknown[]>)
+          : {};
+
+      entriesRecord[collection.id] = collection.entries
         .filter((entry): entry is ChartDataDTO => !entry.loading)
         .map((entry) => {
           const { loading: _loading, ...rest } = entry;
           return rest;
         });
 
-      localStorage.setItem(WOLFRAM_STORAGE_KEY, JSON.stringify(persistable));
+      localStorage.setItem(
+        TAB_ENTRIES_STORAGE_KEY,
+        JSON.stringify(entriesRecord),
+      );
+    },
+
+    addCollection(name: string, mcpServerIds: number[]): Collection {
+      const id = this.uniqueCollectionId(slugify(name));
+
+      const collection: Collection = {
+        id,
+        name,
+        mcpServerIds: [...mcpServerIds],
+        entries: [],
+      };
+      this.initializeCollections([collection]);
+      this.persistCollections();
+      this.persistEntries(collection);
+
+      return collection;
+    },
+
+    updateCollection(
+      id: string,
+      patch: { name?: string; mcpServerIds?: number[] },
+    ): Collection | null {
+      const collection = this.collections.find((c) => c.id === id);
+      if (!collection) return null;
+
+      if (patch.name !== undefined) {
+        collection.name = patch.name;
+      }
+      if (patch.mcpServerIds !== undefined) {
+        collection.mcpServerIds = [...patch.mcpServerIds];
+      }
+
+      this.persistCollections();
+      return collection;
+    },
+
+    deleteCollection(id: string): boolean {
+      const index = this.collections.findIndex((c) => c.id === id);
+      if (index === -1) return false;
+
+      const collection = this.collections[index] as Collection;
+      this.collections.splice(index, 1);
+
+      const stored = readJsonFromStorage(TAB_ENTRIES_STORAGE_KEY);
+      if (
+        typeof stored === "object" &&
+        stored !== null &&
+        !Array.isArray(stored)
+      ) {
+        const entriesRecord = stored as Record<string, unknown>;
+        delete entriesRecord[collection.id];
+        localStorage.setItem(
+          TAB_ENTRIES_STORAGE_KEY,
+          JSON.stringify(entriesRecord),
+        );
+      }
+
+      if (this.activeCollection?.id === id) {
+        this.setActiveCollection(this.collections[0] ?? null);
+      }
+      this.persistCollections();
+
+      // Keep at least one tab around, mirroring the first-run default.
+      if (this.collections.length === 0) {
+        this.createDefaultCollection([]);
+      }
+
+      return true;
+    },
+
+    uniqueCollectionId(baseId: string): string {
+      const existing = new Set(this.collections.map((c) => c.id));
+      if (!existing.has(baseId)) return baseId;
+
+      let suffix = 2;
+      while (existing.has(`${baseId}-${suffix}`)) {
+        suffix += 1;
+      }
+      return `${baseId}-${suffix}`;
     },
 
     async queryNewDataset(query: string) {
@@ -150,18 +285,16 @@ export const useChartData = defineStore("chart-data", {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           query,
-          mcpServerIds:
-            this.wolframServerId !== null ? [this.wolframServerId] : [],
+          mcpServerIds: this.activeCollection?.mcpServerIds ?? [],
         }),
       });
       const data = JSON.parse(await response.text());
 
-      // @ts-ignore
       if (!data["message"]) {
         // Our data is ready & ripe for the taking:
         this.activeCollection?.entries.pop();
         this.activeCollection?.entries.push(data);
-        this.persistWolframEntries();
+        this.persistEntries(this.activeCollection);
         return data;
       }
 
@@ -172,7 +305,7 @@ export const useChartData = defineStore("chart-data", {
 
     directlyAddNewDataset(dataset: ChartDataDTO): ChartDataDTO {
       this.activeCollection?.entries.push(dataset);
-      this.persistWolframEntries();
+      this.persistEntries(this.activeCollection);
 
       return dataset;
     },
@@ -192,9 +325,7 @@ export const useChartData = defineStore("chart-data", {
       let scope: Collection | null = this.activeCollection;
 
       if (collectionSlug !== null) {
-        scope =
-          this.collections.find((c) => slugify(c.name) === collectionSlug) ??
-          null;
+        scope = this.collections.find((c) => c.id === collectionSlug) ?? null;
         this.setActiveCollection(scope);
       }
 
@@ -212,21 +343,19 @@ export const useChartData = defineStore("chart-data", {
 
     historyQueryFor(dataset: ChartDataDTO, collection: Collection) {
       return {
-        [COLLECTION_QUERY_PARAM]: slugify(collection.name),
+        [COLLECTION_QUERY_PARAM]: collection.id,
         [DATASET_QUERY_PARAM]: slugify(dataset.shortenedQuery),
       };
     },
 
     deleteDataset(dataset: ChartDataDTO, collection: Collection) {
-      if (!collection.queriable) return false;
-
       const index = collection.entries.findIndex(
         (entry): entry is ChartDataDTO => !entry.loading && entry === dataset,
       );
       if (index === -1) return false;
 
       collection.entries.splice(index, 1);
-      this.persistWolframEntries();
+      this.persistEntries(collection);
 
       if (this.activeDataset === dataset) {
         this.setActiveDataset(null);

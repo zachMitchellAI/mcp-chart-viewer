@@ -44,10 +44,12 @@ function buildClient(row: McpServerValue): MultiServerMCPClient {
     env = parsed as Record<string, string>;
   }
 
+  const commandPlusArgs = row.command.split(" ");
+
   const connection: StdioConnection = {
     transport: "stdio",
-    command: row.command,
-    args: [],
+    command: commandPlusArgs[0]!,
+    args: commandPlusArgs.slice(1),
     ...(env ? { env } : {}),
   };
 

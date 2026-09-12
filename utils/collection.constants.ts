@@ -1,0 +1,1 @@
+export const COLLECTION_MODAL_WIDTH = 600;
