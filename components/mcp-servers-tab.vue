@@ -178,11 +178,7 @@ function isValidEnvJson(value: string): boolean {
 
 async function refreshServers(): Promise<void> {
   try {
-    const response = await fetch("/api/mcp-servers");
-    if (!response.ok) {
-      throw new Error(`Failed to fetch MCP servers: ${response.status}`);
-    }
-    servers.value = (await response.json()) as McpServerValue[];
+    servers.value = await fetchMcpServers();
   } catch (error) {
     console.error("Failed to fetch MCP servers", error);
   }
@@ -207,14 +203,7 @@ async function createServer(event: FormSubmitEvent): Promise<void> {
   const results = await event;
   if (!results.valid) return;
   try {
-    const response = await fetch("/api/mcp-servers", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(draft.value),
-    });
-    if (!response.ok) {
-      throw new Error(`Failed to create MCP server: ${response.status}`);
-    }
+    await createMcpServer(draft.value);
     await refreshServers();
     showDraft.value = false;
     expanded.value = null;
@@ -231,14 +220,7 @@ async function saveServer(
   const results = await event;
   if (!results.valid) return;
   try {
-    const response = await fetch("/api/mcp-servers", {
-      method: "PATCH",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(server),
-    });
-    if (!response.ok) {
-      throw new Error(`Failed to save MCP server: ${response.status}`);
-    }
+    await saveMcpServer(server);
     await refreshServers();
     expanded.value = null;
   } catch (error) {
@@ -250,14 +232,7 @@ async function saveServer(
 async function deleteServer(server: McpServerValue): Promise<void> {
   if (!confirm(`Delete MCP server "${server.name}"?`)) return;
   try {
-    const response = await fetch("/api/mcp-servers", {
-      method: "DELETE",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ id: server.id }),
-    });
-    if (!response.ok) {
-      throw new Error(`Failed to delete MCP server: ${response.status}`);
-    }
+    await deleteMcpServer(server.id);
     if (expanded.value === server.id) {
       expanded.value = null;
     }

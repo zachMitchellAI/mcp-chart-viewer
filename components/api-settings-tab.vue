@@ -22,9 +22,9 @@ const emit = defineEmits<{ saved: [] }>();
 const settings = ref(new Map<string, string>());
 
 async function load(): Promise<void> {
-  const results = JSON.parse(await (await fetch("/api/user-settings")).text());
-  for (const i in results) {
-    settings.value.set(i, results[i]);
+  const results = await fetchUserSettings();
+  for (const [key, value] of Object.entries(results)) {
+    settings.value.set(key, value);
   }
 
   console.log(settings.value);
@@ -37,14 +37,7 @@ function valUpdate(key: string, evt: string) {
 
 async function submitChanges() {
   try {
-    const response = await fetch("/api/user-settings", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(Object.fromEntries(settings.value)),
-    });
-    if (!response.ok) {
-      throw new Error(`Failed to save settings: ${response.status}`);
-    }
+    await saveUserSettings(Object.fromEntries(settings.value));
   } catch (error) {
     console.error("Failed to save settings", error);
     alert("Saving settings failed. Please try again.");

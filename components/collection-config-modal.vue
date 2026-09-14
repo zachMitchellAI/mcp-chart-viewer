@@ -120,7 +120,7 @@ function close(): void {
 async function refreshServers(): Promise<void> {
   loadingServers.value = true;
   try {
-    const response = await $fetch<McpServerValue[]>("/api/mcp-servers");
+    const response = await fetchMcpServers();
     servers.value = response;
   } catch (e) {
     console.error("Failed to fetch MCP servers", e);

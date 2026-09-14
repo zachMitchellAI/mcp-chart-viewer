@@ -1,7 +1,7 @@
 import { createDeepAgent, type DeepAgent, type SubAgent } from "deepagents";
 import { ChatOpenRouter } from "@langchain/openrouter";
-import { providerStrategy, toolStrategy } from "langchain";
-import { ChartDataDTOSchema, createChartDataDTOSchema } from "./chart-schemas";
+import { toolStrategy } from "langchain";
+import { AgentResponseSchema, createChartDataDTOSchema } from "./chart-schemas";
 import { CHART_TYPES, type ChartTypeLiteral } from "./chart-types.interface";
 import {
   CHART_TYPE_GUIDANCE,
@@ -93,7 +93,10 @@ export async function createAgent(deps: AgentDeps): Promise<DeepAgent> {
         mode: "deny",
       },
     ],
-    responseFormat: providerStrategy(ChartDataDTOSchema),
+    // `providerStrategy` relies on provider-native JSON-schema output, which
+    // GLM-flash/OpenRouter ignores (it returns prose), so use tool-call based
+    // structured output with retry-on-validation-failure instead.
+    responseFormat: toolStrategy(AgentResponseSchema, { handleError: true }),
     subagents,
   });
 

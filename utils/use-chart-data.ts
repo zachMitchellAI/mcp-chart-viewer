@@ -15,6 +15,7 @@ import {
   TAB_STORAGE_KEY,
 } from "./history.constants";
 import { WOLFRAM_MCP_SERVER_NAME } from "./db/db.constants";
+import { askForDataset, fetchMcpServers } from "./api-client";
 import { slugify } from "./slugify";
 
 function parseEntries(raw: unknown): ChartDataDTO[] {
@@ -82,8 +83,7 @@ export const useChartData = defineStore("chart-data", {
 
     async loadDefaultServerId() {
       try {
-        const servers =
-          await $fetch<Array<{ id: number; name: string }>>("/api/mcp-servers");
+        const servers = await fetchMcpServers();
         const defaultServer = servers.find(
           (server) => server.name === WOLFRAM_MCP_SERVER_NAME,
         );
@@ -280,27 +280,24 @@ export const useChartData = defineStore("chart-data", {
 
       this.activeCollection?.entries.push(skeletonDataset);
 
-      const response = await fetch("/api/ask", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
+      try {
+        const data = await askForDataset(
           query,
-          mcpServerIds: this.activeCollection?.mcpServerIds ?? [],
-        }),
-      });
-      const data = JSON.parse(await response.text());
+          this.activeCollection?.mcpServerIds ?? [],
+        );
 
-      if (!data["message"]) {
         // Our data is ready & ripe for the taking:
         this.activeCollection?.entries.pop();
         this.activeCollection?.entries.push(data);
         this.persistEntries(this.activeCollection);
         return data;
-      }
+      } catch (error) {
+        console.error("failed to query dataset:", error);
 
-      // Error case: remove skeleton and return null so caller doesn't set active dataset
-      this.activeCollection?.entries.pop();
-      return null;
+        // Error case: remove skeleton and return null so caller doesn't set active dataset
+        this.activeCollection?.entries.pop();
+        return null;
+      }
     },
 
     directlyAddNewDataset(dataset: ChartDataDTO): ChartDataDTO {

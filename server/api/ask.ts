@@ -78,7 +78,7 @@ export default defineEventHandler(async (event) => {
 
     // The model's own `toolCallsUsed` value is unreliable (it hallucinates);
     // always overwrite it with the count recorded by the tool-call recorder.
-    return { ...response.structuredResponse, toolCallsUsed };
+    return { ...response.structuredResponse, toolCallsUsed, loading: false };
   } catch (e) {
     event.node.res.statusCode = 400;
     return { message: e };

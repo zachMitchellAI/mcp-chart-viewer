@@ -14,7 +14,11 @@
     >
       <template v-slot:default="{ items, isExpanded, toggleExpand }">
         <v-row>
-          <v-col v-for="item in items" :key="item.raw.shortenedQuery" cols="12">
+          <v-col
+            v-for="item in [...items].reverse()"
+            :key="item.raw.shortenedQuery"
+            cols="12"
+          >
             <v-skeleton-loader
               class="border"
               :type="['image', 'heading', 'text']"

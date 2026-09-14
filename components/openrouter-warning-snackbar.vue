@@ -37,5 +37,13 @@ span {
 </template>
 
 <script setup>
-const snackbar = ref(useFetch("/api/needs-api-key").data.value?.result);
+const snackbar = ref(false);
+
+onMounted(async () => {
+  try {
+    snackbar.value = await fetchNeedsApiKey();
+  } catch (error) {
+    console.error("Failed to check API key status", error);
+  }
+});
 </script>

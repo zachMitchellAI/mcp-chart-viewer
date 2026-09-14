@@ -197,6 +197,10 @@ export const ChartDataDTOSchema = z
   .strict();
 
 export type ChartDataDTO = z.infer<typeof ChartDataDTOSchema>;
+
+// `loading` is a client-side flag, never a model output; the delegator's
+// response format must not require it.
+export const AgentResponseSchema = ChartDataDTOSchema.omit({ loading: true });
 export type ChartConfiguration = z.infer<typeof ChartConfigurationSchema>;
 export type ChartData = z.infer<typeof ChartDataSchema>;
 export type AnyChartDataset = z.infer<typeof AnyChartDatasetSchema>;
