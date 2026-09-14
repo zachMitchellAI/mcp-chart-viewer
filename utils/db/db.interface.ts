@@ -11,6 +11,7 @@ export type McpServerValue = {
   url: string | null;
   command: string | null;
   env: string | null;
+  headers: string | null;
   agentInstructions: string | null;
 };
 

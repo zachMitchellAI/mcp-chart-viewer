@@ -28,7 +28,7 @@ export const CHART_FORMATTER_BASE_PROMPT = `You are a chart formatting agent for
 
   {GUIDANCE}
 
-  Output ONLY the structured chart DTO. Do not include explanatory text.`;
+  Output ONLY the structured chart DTO. Do not include explanatory text, or markdown fencing for the snippet created.`;
 
 export const DATA_DELEGATOR_PROMPT = `You are a delegator agent designed to:
     1. delegate \`data-agent\` to find answers to questions the user has asked

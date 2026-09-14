@@ -15,9 +15,8 @@ It makes use of the following under the hood to bring it to life:
 
 # Setup
 
-First, ensure you have an openrouter api key! If not, grab one over at https://openrouter.ai . Afterwards, return here and paste that into [`.env`](./.env)
-
-Next, install everything via bun:
+1. Ensure you have an openrouter api key! If not, grab one over at https://openrouter.ai
+2. Install everything via bun:
 
 ```bash
 # Install...
@@ -29,7 +28,14 @@ bun --bun dev
 # < Now Listening to http://localhost:3000 ... >
 ```
 
-> If you don't want to use openrouter, there are static examples of charts on the second tab of the page.
+3. navigate to the page, and click on the gear (top right corner) to add your openrouter API key
+
+![Api Settings](./gh-assets/api-settings.png)
+
+4. Click save, then you're done!
+5. (Optional) configure MCP servers from that previous menu - wolfram is available by default, but remote servers and local servers are supported
+
+> If you don't want to use openrouter, there are static examples of charts by inserting `!mock` in the prompt box!
 
 # Protips for running
 
@@ -42,6 +48,38 @@ It'll do it's best, but makes mistakes regardless!
 ## Test the prompt box without actually triggering the LLM
 
 Simply inserting `!mock` in the box allows to test server calls without calling an LLM or using an API key.
+
+## Edit and share your finished charts
+
+By using the "copy" feature on a finished chart, it's possible to paste that into either a code editor, or the prompt box itself.
+
+By doing this, you can add values, change existing ones, or even change out the color of the chart itself.
+
+**Sharing** your charts can be done the same way! Copy the chart result, then exchange it on a channel such as slack through the snippets feature. (Other platforms support the markdown/json combo, such as atlassian confluence and other products)
+
+## MCP specific instructions
+
+The Subagent may attempt to prompt a tool similar to how it would through a web search.
+
+Some server tools don't work that way, such as `wikipedia` - it will provide articles through `get_article`, therefore requiring a name. The tool instructions can hcange this behavior. For example:
+
+```
+The get_article tool returns a wikipedia page of the exact name. It doesn't work like a search engine! However it can be used to retrieve metadata about the subject being talked about.
+```
+
+# Great MCP servers to try out
+
+- [wolfram-alpha](https://www.wolfram.com/artificial-intelligence/mcp/cloud/wolfram-mcp-cloud/) (built in!)
+- [wikipedia](https://github.com/Rudra-ravi/wikipedia-mcp)
+- [openrouter](https://openrouter.ai/docs/guides/overview/mcp-server)
+
+For openrouter specifically, while the directions say it uses oauth, it's also secretly possible to just supply an API key:
+
+```json
+{
+  "Authorization": "Bearer sk-or-v1-78ddb2e44c224f0eb7a7c3cf660cfe60b5bf7cc75d1744afbee3fa8d0ab0b5b"
+}
+```
 
 # Dream upgrades
 
@@ -104,7 +142,6 @@ Display the entire nutrition facts for "chicken". It must be a bar chart, should
 
 # Known Bugs
 
-- GLM5.2 will sometimes make weird chart data, it confuses chart.js if that happens it can cause the app to crash.
 - ESLint for typescript 7.0.2 is not supported: https://github.com/typescript-eslint/typescript-eslint/issues/12518 - they plan on doing support for 7.1, as such its not in this project until then
 - Importing types is bugged in 7.0.2 and CLI/Server rendering. `.vue` files will have interfaces in-file, which is alright. The rest of the imports nuxt is doing inferrence on.
   - Strangely enough, zod exports somehow escape this quirk
@@ -118,3 +155,9 @@ Display the entire nutrition facts for "chicken". It must be a bar chart, should
 ![Chicken](./gh-readme-assets/chicken.png)
 ![Weather](./gh-readme-assets/weather.png)
 ![Color](./gh-readme-assets/color.png)
+![Fish](./gh-readme-assets/fish.png)
+![Openrouter](./gh-readme-assets/openrouter.png)
+![Openrouter 2](./gh-readme-assets/openrouter2.png)
+![Api Settings](./gh-readme-assets/api-settings.png)
+![Tab Config](./gh-readme-assets/tab-config.png)
+![Openrouter Config](./gh-readme-assets/openrouter-config.png)

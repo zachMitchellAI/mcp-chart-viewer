@@ -7,7 +7,7 @@ import { invalidateAgents } from "../utils/agent-store";
 import { invalidateMcpServer } from "../utils/mcp-store";
 import type { McpServerInput } from "../../utils/db/db.interface";
 
-const envSchema = z
+const jsonRecordSchema = z
   .string()
   .transform((val, ctx) => {
     if (val.trim() === "") return null;
@@ -16,36 +16,36 @@ const envSchema = z
     } catch {
       ctx.addIssue({
         code: "custom",
-        message: "env must be valid JSON",
+        message: "must be valid JSON",
       });
       return z.NEVER;
     }
   })
   .pipe(
     z.union([
-      z.record(z.string(), z.string()).transform((env) => JSON.stringify(env)),
+      z
+        .record(z.string(), z.string())
+        .transform((record) => JSON.stringify(record)),
       z.null(),
     ]),
   );
 
-const baseFields = {
-  name: z.string().min(1),
-  env: envSchema.nullish(),
-  agentInstructions: z.string().nullish(),
-};
-
 const remoteServerSchema = z.object({
-  ...baseFields,
+  name: z.string().min(1),
   isRemote: z.literal(true),
   url: z.string().min(1),
+  headers: jsonRecordSchema.nullish(),
   command: z.string().nullish(),
+  agentInstructions: z.string().nullish(),
 });
 
 const localServerSchema = z.object({
-  ...baseFields,
+  name: z.string().min(1),
   isRemote: z.literal(false),
   url: z.string().nullish(),
+  env: jsonRecordSchema.nullish(),
   command: z.string().min(1),
+  agentInstructions: z.string().nullish(),
 });
 
 const addServerSchema = z.discriminatedUnion("isRemote", [
@@ -65,12 +65,24 @@ const deleteServerSchema = z.object({
 });
 
 function toInput(server: ServerPayload): McpServerInput {
+  if (server.isRemote) {
+    return {
+      name: server.name,
+      isRemote: true,
+      url: server.url,
+      command: null,
+      env: null,
+      headers: server.headers ?? null,
+      agentInstructions: server.agentInstructions ?? null,
+    };
+  }
   return {
     name: server.name,
-    isRemote: server.isRemote,
-    url: server.url ?? null,
-    command: server.command ?? null,
+    isRemote: false,
+    url: null,
+    command: server.command,
     env: server.env ?? null,
+    headers: null,
     agentInstructions: server.agentInstructions ?? null,
   };
 }

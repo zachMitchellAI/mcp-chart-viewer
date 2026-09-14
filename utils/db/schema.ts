@@ -14,5 +14,6 @@ export const mcpServers = sqliteTable("mcp_servers", {
   url: text(),
   command: text(),
   env: text(),
+  headers: text(),
   agentInstructions: text(),
 });

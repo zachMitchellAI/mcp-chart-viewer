@@ -1,3 +1,10 @@
+<style>
+.mcp-servers-menu {
+  max-height: 70vh;
+  overflow-y: auto;
+}
+</style>
+
 <template>
   <div class="d-flex justify-start mt-2">
     <v-btn
@@ -10,7 +17,7 @@
       @click="onAddServer"
     ></v-btn>
   </div>
-  <v-expansion-panels v-model="expanded">
+  <v-expansion-panels v-model="expanded" class="mcp-servers-menu">
     <v-expansion-panel
       v-for="server in servers"
       :key="server.id"
@@ -57,11 +64,20 @@
             :rules="[requiredRule]"
           ></v-text-field>
           <v-textarea
+            v-if="!server.isRemote"
             v-model="server.env"
             label="Environment variables (JSON)"
             hint='Optional. e.g. {"KEY": "value"}'
             persistent-hint
-            :rules="[envRule]"
+            :rules="[jsonRecordRule]"
+          ></v-textarea>
+          <v-textarea
+            v-if="server.isRemote"
+            v-model="server.headers"
+            label="HTTP headers (JSON)"
+            hint='Optional. e.g. {"Authorization": "Bearer YOUR_TOKEN"}'
+            persistent-hint
+            :rules="[jsonRecordRule]"
           ></v-textarea>
           <v-textarea
             v-model="server.agentInstructions"
@@ -106,11 +122,20 @@
             :rules="[requiredRule]"
           ></v-text-field>
           <v-textarea
+            v-if="!draft.isRemote"
             v-model="draft.env"
             label="Environment variables (JSON)"
             hint='Optional. e.g. {"KEY": "value"}'
             persistent-hint
-            :rules="[envRule]"
+            :rules="[jsonRecordRule]"
+          ></v-textarea>
+          <v-textarea
+            v-if="draft.isRemote"
+            v-model="draft.headers"
+            label="HTTP headers (JSON)"
+            hint='Optional. e.g. {"Authorization": "Bearer YOUR_TOKEN"}'
+            persistent-hint
+            :rules="[jsonRecordRule]"
           ></v-textarea>
           <v-textarea
             v-model="draft.agentInstructions"
@@ -144,8 +169,8 @@ type FormSubmitEvent = Event & Promise<{ valid: boolean }>;
 const requiredRule: FormRule = (value) =>
   (!!value && value.trim().length > 0) || "Required";
 
-const envRule: FormRule = (value) =>
-  isValidEnvJson(value ?? "") ||
+const jsonRecordRule: FormRule = (value) =>
+  isValidJsonRecord(value ?? "") ||
   'Must be valid JSON object of string values, e.g. {"KEY": "value"}';
 
 function createBlankDraft(): McpServerInput {
@@ -155,11 +180,12 @@ function createBlankDraft(): McpServerInput {
     url: "",
     command: "",
     env: "",
+    headers: "",
     agentInstructions: "",
   };
 }
 
-function isValidEnvJson(value: string): boolean {
+function isValidJsonRecord(value: string): boolean {
   if (value.trim() === "") return true;
   try {
     const parsed: unknown = JSON.parse(value);

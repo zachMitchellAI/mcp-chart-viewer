@@ -19,10 +19,23 @@ function buildClient(row: McpServerValue): MultiServerMCPClient {
     if (!row.url) {
       throw new Error(`MCP server "${row.name}" is remote but has no url`);
     }
+    let headers: Record<string, string> | undefined;
+    if (row.headers) {
+      const parsed: unknown = JSON.parse(row.headers);
+      if (
+        parsed === null ||
+        typeof parsed !== "object" ||
+        Array.isArray(parsed)
+      ) {
+        throw new Error(`MCP server "${row.name}" has malformed headers JSON`);
+      }
+      headers = parsed as Record<string, string>;
+    }
     return new MultiServerMCPClient({
       [row.name]: {
         transport: "http",
         url: row.url,
+        ...(headers ? { headers } : {}),
       },
     });
   }
