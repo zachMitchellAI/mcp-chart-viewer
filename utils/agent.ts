@@ -12,9 +12,16 @@ import {
 import type { AgentDeps } from "../server/utils/agent-store.interface";
 import { toolCallRecorder } from "../server/utils/tool-call-recorder";
 
+function createSubagentModel(settings: AgentDeps["settings"]): ChatOpenRouter {
+  return new ChatOpenRouter({
+    model: settings?.CHART_SUBAGENT || "google/gemma-4-31b-it",
+    apiKey: settings?.OPENROUTER_API_KEY,
+  });
+}
+
 function createChartFormatterSubAgent(
   type: ChartTypeLiteral,
-  subagentModel: string | undefined,
+  model: ChatOpenRouter,
 ): SubAgent {
   const prompt = CHART_FORMATTER_BASE_PROMPT.replace("{TYPE}", type).replace(
     "{GUIDANCE}",
@@ -24,7 +31,7 @@ function createChartFormatterSubAgent(
   return {
     name: `${type}-formatter`,
     description: `Format data as ${type} chart`,
-    model: subagentModel,
+    model,
     systemPrompt: prompt,
     responseFormat: toolStrategy<typeof schema>(schema, {
       handleError: true,
@@ -57,10 +64,7 @@ export async function createAgent(deps: AgentDeps): Promise<DeepAgent> {
   });
 
   const chartFormatters = CHART_TYPES.map((type) =>
-    createChartFormatterSubAgent(
-      type,
-      settings?.CHART_SUBAGENT || "google/gemma-4-31b-it",
-    ),
+    createChartFormatterSubAgent(type, createSubagentModel(settings)),
   );
 
   const subagents: SubAgent[] = [...chartFormatters];
@@ -70,7 +74,7 @@ export async function createAgent(deps: AgentDeps): Promise<DeepAgent> {
     subagents.push({
       name: "data-agent",
       description: "Run data-gathering queries based on user requests",
-      model: settings?.CHART_SUBAGENT,
+      model: createSubagentModel(settings),
       tools,
       middleware: [toolCallRecorder],
       systemPrompt: buildSubagentSystemPrompt(deps),
