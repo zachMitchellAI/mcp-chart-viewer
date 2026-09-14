@@ -6,3 +6,13 @@ export const config = sqliteTable("config", {
   type: text().notNull(),
   value: text().notNull(),
 });
+
+export const mcpServers = sqliteTable("mcp_servers", {
+  id: int().primaryKey({ autoIncrement: true }),
+  name: text().notNull().unique(),
+  isRemote: int({ mode: "boolean" }).notNull(),
+  url: text(),
+  command: text(),
+  env: text(),
+  agentInstructions: text(),
+});

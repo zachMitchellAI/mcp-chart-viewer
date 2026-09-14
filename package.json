@@ -1,5 +1,5 @@
 {
-  "name": "wolfram-chart-viewer",
+  "name": "mcp-chart-viewer",
   "type": "module",
   "private": true,
   "scripts": {

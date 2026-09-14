@@ -5,19 +5,22 @@
       text=""
       title="Configuration settings"
     >
-      <v-row v-for="field in SETTING_FIELDS" :key="field.key" justify="center">
-        <v-col cols="8">
-          <v-list-subheader>{{ field.title }}</v-list-subheader>
-          <v-text-field
-            label=""
-            :model-value="settings.get(field.key)"
-            @update:model-value="valUpdate(field.key, $event)"
-          ></v-text-field>
-        </v-col>
-      </v-row>
-      <template v-slot:actions>
-        <v-btn class="ms-auto" text="Ok" @click="submitChanges"></v-btn>
-      </template>
+      <v-tabs v-model="tab" color="primary">
+        <v-tab :value="API_SETTINGS_TAB">API Settings</v-tab>
+        <v-tab :value="MCP_SERVERS_TAB">MCP Servers</v-tab>
+      </v-tabs>
+
+      <v-divider></v-divider>
+
+      <v-tabs-window v-model="tab">
+        <v-tabs-window-item :value="API_SETTINGS_TAB" class="px-3 py-3">
+          <api-settings-tab ref="apiTab" @saved="close" />
+        </v-tabs-window-item>
+
+        <v-tabs-window-item :value="MCP_SERVERS_TAB" class="px-3 pb-3">
+          <mcp-servers-tab ref="mcpTab" />
+        </v-tabs-window-item>
+      </v-tabs-window>
     </v-card>
   </v-dialog>
 </template>
@@ -25,42 +28,19 @@
 <script setup lang="ts">
 const isOpen = defineModel<boolean>("isOpen", { default: false });
 
-const settings = ref(new Map<string, string>());
+const tab = ref<SettingsTab>(API_SETTINGS_TAB);
+
+const apiTab = ref<{ load: () => Promise<void> } | null>(null);
+const mcpTab = ref<{ refreshServers: () => Promise<void> } | null>(null);
 
 watch(isOpen, async (newOpen) => {
-  if (newOpen) {
-    // Attempt to fetch the latest settings here
-    const results = JSON.parse(
-      await (await fetch("/api/user-settings")).text(),
-    );
-    for (const i in results) {
-      settings.value.set(i, results[i]);
-    }
-
-    console.log(settings.value);
-  }
+  if (!newOpen) return;
+  // Wait for the dialog contents to mount so the tab refs are available
+  await nextTick();
+  await Promise.all([apiTab.value?.load(), mcpTab.value?.refreshServers()]);
 });
 
-function valUpdate(key: string, evt: string) {
-  console.log(key, evt);
-  settings.value.set(key, evt);
-}
-
-async function submitChanges() {
-  try {
-    const response = await fetch("/api/user-settings", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(Object.fromEntries(settings.value)),
-    });
-    if (!response.ok) {
-      throw new Error(`Failed to save settings: ${response.status}`);
-    }
-  } catch (error) {
-    console.error("Failed to save settings", error);
-    alert("Saving settings failed. Please try again.");
-  } finally {
-    isOpen.value = false;
-  }
+function close(): void {
+  isOpen.value = false;
 }
 </script>

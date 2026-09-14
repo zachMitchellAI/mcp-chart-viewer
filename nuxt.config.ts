@@ -4,6 +4,9 @@ export default defineNuxtConfig({
   devtools: { enabled: true },
   modules: ["@nuxt/eslint", "vuetify-nuxt-module", "@pinia/nuxt"],
   ssr: false,
+  imports: {
+    dirs: ["utils", "utils/db"],
+  },
   typescript: {
     typeCheck: true,
     tsConfig: {

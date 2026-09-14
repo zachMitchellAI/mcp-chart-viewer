@@ -46,7 +46,7 @@ const theme = ref<Theme>(props.existingTheme);
 const settingsOpened = ref(false);
 
 const computedTitle = computed(() => {
-  const base = "Wolfram Chart Viewer";
+  const base = "MCP Chart Viewer";
   const subtitle = props.activeDataset?.shortenedQuery;
   return subtitle ? `${base} - ${subtitle}` : base;
 });

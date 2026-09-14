@@ -1,6 +1,6 @@
-# Wolfram Chart viewer
+# MCP Chart Viewer
 
-A chart application designed to make use of the [Wolfram Alpha](https://wolframalpha.com) MCP server and [Chart.js](https://www.chartjs.org/), to display custom graphs!
+A provider-agnostic chart application that turns natural-language questions into [Chart.js](https://www.chartjs.org/) graphs, using any [MCP](https://modelcontextprotocol.io) servers you connect as data sources. It ships with the [Wolfram Alpha](https://wolframalpha.com) MCP server seeded by default, but any MCP server (remote or local) can be plugged in per tab.
 
 It makes use of the following under the hood to bring it to life:
 
@@ -53,7 +53,7 @@ Possible routes that could be taken if this was worked on more:
 - [x] custom theming
 - [x] Delete previous queries
 - [x] Copy & paste chart data from other sessions
-- [ ] plugins: gather data from other MCP sources & tools
+- [x] plugins: gather data from other MCP sources & tools
 - [ ] data verification (is this a correct shape, even though the model tried?)
 
 # Starter queries
@@ -83,7 +83,7 @@ box office proffit of toy story 1 versus toy story 2
 ```
 
 ```
-(skip wolfram) Make me a pie chart that has the following values: 3, 50, 25, 22
+(skip data gathering) Make me a pie chart that has the following values: 3, 50, 25, 22
 ```
 
 ```

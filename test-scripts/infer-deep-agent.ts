@@ -1,7 +1,27 @@
-import { createWolframAgent } from "../utils/wolfram-agent";
+import { eq } from "drizzle-orm";
+import { createAgent } from "../utils/agent";
+import { resolveMcpServers } from "../server/utils/mcp-store";
+import { getSettings } from "../server/db/get-settings";
+import { db } from "../server/db";
+import { mcpServers } from "../utils/db/schema";
+import { WOLFRAM_MCP_SERVER_NAME } from "../utils/db/db.constants";
 
 const useStream = process.argv.includes("--stream");
-const agent = await createWolframAgent();
+const rows = await db
+  .select()
+  .from(mcpServers)
+  .where(eq(mcpServers.name, WOLFRAM_MCP_SERVER_NAME));
+const defaultRow = rows[0];
+if (!defaultRow) {
+  throw new Error(
+    `no seeded MCP server named "${WOLFRAM_MCP_SERVER_NAME}" found; start the server once to seed it`,
+  );
+}
+const servers = await resolveMcpServers([defaultRow.id]);
+const agent = await createAgent({
+  servers,
+  settings: await getSettings(),
+});
 
 const input = {
   messages: [
