@@ -1,11 +1,12 @@
 import { z } from "zod";
 import { getAgent } from "../utils/agent-store";
 import { resolveMcpServers } from "../utils/mcp-store";
+import { runWithToolCallCounting } from "../utils/tool-call-recorder";
 import mockJson from "../../public/static-chart-data.json";
 
 const filteredMock = mockJson.filter((e) => !e.loading);
 
-const askWolframSchema = z.object({
+const askSchema = z.object({
   query: z.string().min(1),
   mcpServerIds: z
     .array(z.number().int().positive())
@@ -22,7 +23,7 @@ export default defineEventHandler(async (event) => {
   }
 
   const body = await readBody<unknown>(event);
-  const parsed = askWolframSchema.safeParse(body);
+  const parsed = askSchema.safeParse(body);
   if (!parsed.success) {
     event.node.res.statusCode = 400;
     return {
@@ -58,9 +59,12 @@ export default defineEventHandler(async (event) => {
 
   // In a production environment, we'd need to sanitize this input for things like prompt-jacking.
   try {
-    const response = await generatedAgent.invoke({
-      messages: [{ role: "user", content: query }],
-    });
+    const { result: response, toolCallsUsed } = await runWithToolCallCounting(
+      () =>
+        generatedAgent.invoke({
+          messages: [{ role: "user", content: query }],
+        }),
+    );
 
     if (!response) {
       return {
@@ -72,7 +76,9 @@ export default defineEventHandler(async (event) => {
     // Print the response back to the console
     console.log(response);
 
-    return response.structuredResponse;
+    // The model's own `toolCallsUsed` value is unreliable (it hallucinates);
+    // always overwrite it with the count recorded by the tool-call recorder.
+    return { ...response.structuredResponse, toolCallsUsed };
   } catch (e) {
     event.node.res.statusCode = 400;
     return { message: e };

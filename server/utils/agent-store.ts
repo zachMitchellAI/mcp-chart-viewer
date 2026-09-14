@@ -1,5 +1,5 @@
 import type { DeepAgent } from "deepagents";
-import { createAgent } from "../../utils/wolfram-agent";
+import { createAgent } from "../../utils/agent";
 import { getSettings } from "../db/get-settings";
 import type { AgentCacheEntry, AgentDeps } from "./agent-store.interface";
 import { resolveMcpServers } from "./mcp-store";

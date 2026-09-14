@@ -63,6 +63,12 @@
             persistent-hint
             :rules="[envRule]"
           ></v-textarea>
+          <v-textarea
+            v-model="server.agentInstructions"
+            label="Agent instructions"
+            hint="Optional. Appended to the data-gathering agent's prompt when this server's tools are used"
+            persistent-hint
+          ></v-textarea>
           <v-btn class="mt-2" type="submit" text="Save" color="primary"></v-btn>
         </v-form>
       </v-expansion-panel-text>
@@ -106,6 +112,12 @@
             persistent-hint
             :rules="[envRule]"
           ></v-textarea>
+          <v-textarea
+            v-model="draft.agentInstructions"
+            label="Agent instructions"
+            hint="Optional. Appended to the data-gathering agent's prompt when this server's tools are used"
+            persistent-hint
+          ></v-textarea>
           <v-row class="mt-1">
             <v-col cols="auto">
               <v-btn type="submit" text="Create" color="primary"></v-btn>
@@ -137,7 +149,14 @@ const envRule: FormRule = (value) =>
   'Must be valid JSON object of string values, e.g. {"KEY": "value"}';
 
 function createBlankDraft(): McpServerInput {
-  return { name: "", isRemote: false, url: "", command: "", env: "" };
+  return {
+    name: "",
+    isRemote: false,
+    url: "",
+    command: "",
+    env: "",
+    agentInstructions: "",
+  };
 }
 
 function isValidEnvJson(value: string): boolean {

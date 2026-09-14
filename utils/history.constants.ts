@@ -6,4 +6,4 @@ export const TAB_ENTRIES_STORAGE_KEY = "chart-tab-entries";
 export const COLLECTION_QUERY_PARAM = "collection";
 export const DATASET_QUERY_PARAM = "dataset";
 
-export const WOLFRAM_COLLECTION_NAME = "Wolfram Queries";
+export const DEFAULT_COLLECTION_NAME = "Queries";

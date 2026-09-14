@@ -2,7 +2,7 @@ import { eq } from "drizzle-orm";
 import { db } from "../db";
 import { mcpServers } from "../../utils/db/schema";
 import { WOLFRAM_MCP_SERVER_NAME } from "../../utils/db/db.constants";
-import { WOLFRAM_MCP_INSTRUCTIONS } from "../../utils/wolfram-agent.constants";
+import { WOLFRAM_MCP_INSTRUCTIONS } from "../../utils/agent.constants";
 
 const WOLFRAM_MCP_URL = "https://agenttools.wolfram.com/mcp";
 

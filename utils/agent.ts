@@ -6,10 +6,11 @@ import { CHART_TYPES, type ChartTypeLiteral } from "./chart-types.interface";
 import {
   CHART_TYPE_GUIDANCE,
   CHART_FORMATTER_BASE_PROMPT,
-  WOLFRAM_DELEGATOR_PROMPT,
-  WOLFRAM_SUBAGENT_PROMPT,
-} from "./wolfram-agent.constants";
+  DATA_DELEGATOR_PROMPT,
+  DATA_SUBAGENT_PROMPT,
+} from "./agent.constants";
 import type { AgentDeps } from "../server/utils/agent-store.interface";
+import { toolCallRecorder } from "../server/utils/tool-call-recorder";
 
 function createChartFormatterSubAgent(
   type: ChartTypeLiteral,
@@ -36,9 +37,9 @@ function buildSubagentSystemPrompt(deps: AgentDeps): string {
     .map((server) => server.instructions?.trim())
     .filter((instructions): instructions is string => Boolean(instructions));
 
-  if (instructions.length === 0) return WOLFRAM_SUBAGENT_PROMPT;
+  if (instructions.length === 0) return DATA_SUBAGENT_PROMPT;
 
-  return `${WOLFRAM_SUBAGENT_PROMPT}\n\n${instructions.join("\n\n")}`;
+  return `${DATA_SUBAGENT_PROMPT}\n\n${instructions.join("\n\n")}`;
 }
 
 export async function createAgent(deps: AgentDeps): Promise<DeepAgent> {
@@ -67,10 +68,11 @@ export async function createAgent(deps: AgentDeps): Promise<DeepAgent> {
   const tools = deps.servers.flatMap((server) => server.tools);
   if (tools.length > 0) {
     subagents.push({
-      name: "wolfram-agent",
+      name: "data-agent",
       description: "Run data-gathering queries based on user requests",
       model: settings?.CHART_SUBAGENT,
       tools,
+      middleware: [toolCallRecorder],
       systemPrompt: buildSubagentSystemPrompt(deps),
     } as SubAgent);
   } else {
@@ -79,7 +81,7 @@ export async function createAgent(deps: AgentDeps): Promise<DeepAgent> {
 
   const agent = createDeepAgent({
     model,
-    systemPrompt: WOLFRAM_DELEGATOR_PROMPT,
+    systemPrompt: DATA_DELEGATOR_PROMPT,
     permissions: [
       {
         operations: ["read", "write"],

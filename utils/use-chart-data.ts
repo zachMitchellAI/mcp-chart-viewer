@@ -9,10 +9,10 @@ import { type ChartDataDTO, AnyChartDataDTOSchema } from "./chart-schemas";
 import {
   COLLECTION_QUERY_PARAM,
   DATASET_QUERY_PARAM,
+  DEFAULT_COLLECTION_NAME,
   LEGACY_WOLFRAM_STORAGE_KEY,
   TAB_ENTRIES_STORAGE_KEY,
   TAB_STORAGE_KEY,
-  WOLFRAM_COLLECTION_NAME,
 } from "./history.constants";
 import { WOLFRAM_MCP_SERVER_NAME } from "./db/db.constants";
 import { slugify } from "./slugify";
@@ -54,7 +54,7 @@ export const useChartData = defineStore("chart-data", {
       activeCollection: null,
       activeDataset: null,
       initialized: false,
-      wolframServerId: null,
+      defaultServerId: null,
     } as ChartDataState;
 
     if (stateDraft.collections[0]) {
@@ -76,24 +76,24 @@ export const useChartData = defineStore("chart-data", {
       if (this.initialized) return;
       this.initialized = true;
 
-      await this.loadWolframServerId();
+      await this.loadDefaultServerId();
       this.loadTabs();
     },
 
-    async loadWolframServerId() {
+    async loadDefaultServerId() {
       try {
         const servers =
           await $fetch<Array<{ id: number; name: string }>>("/api/mcp-servers");
-        const wolfram = servers.find(
+        const defaultServer = servers.find(
           (server) => server.name === WOLFRAM_MCP_SERVER_NAME,
         );
-        if (!wolfram) {
+        if (!defaultServer) {
           console.warn(
-            "no wolfram MCP server found; queries will have no tools",
+            "no default MCP server found; queries will have no tools",
           );
           return;
         }
-        this.wolframServerId = wolfram.id;
+        this.defaultServerId = defaultServer.id;
       } catch (e) {
         console.error("failed to load MCP server list:", e);
       }
@@ -121,8 +121,8 @@ export const useChartData = defineStore("chart-data", {
         return;
       }
 
-      // First run (or pre-custom-tabs data): migrate legacy wolfram entries
-      // into a default tab with the wolfram server enabled.
+      // First run (or pre-custom-tabs data): migrate legacy entries into a
+      // default tab with the default MCP server enabled.
       this.createDefaultCollection(
         parseEntries(readJsonFromStorage(LEGACY_WOLFRAM_STORAGE_KEY)),
       );
@@ -131,10 +131,10 @@ export const useChartData = defineStore("chart-data", {
 
     createDefaultCollection(entries: ChartDataDTO[]): Collection {
       const collection: Collection = {
-        id: slugify(WOLFRAM_COLLECTION_NAME),
-        name: WOLFRAM_COLLECTION_NAME,
+        id: slugify(DEFAULT_COLLECTION_NAME),
+        name: DEFAULT_COLLECTION_NAME,
         mcpServerIds:
-          this.wolframServerId !== null ? [this.wolframServerId] : [],
+          this.defaultServerId !== null ? [this.defaultServerId] : [],
         entries,
       };
 
@@ -273,14 +273,14 @@ export const useChartData = defineStore("chart-data", {
     },
 
     async queryNewDataset(query: string) {
-      // A fake dataset until we get a query back from wolfram.
+      // A fake dataset until we get a query back from the server.
       const skeletonDataset = {
         loading: true,
       } as ChartDataSkeleton;
 
       this.activeCollection?.entries.push(skeletonDataset);
 
-      const response = await fetch("/api/ask-wolfram", {
+      const response = await fetch("/api/ask", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
