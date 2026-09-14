@@ -30,7 +30,7 @@ bun --bun dev
 
 3. navigate to the page, and click on the gear (top right corner) to add your openrouter API key
 
-![Api Settings](./gh-assets/api-settings.png)
+![Api Settings](./gh-readme-assets/api-settings.png)
 
 4. Click save, then you're done!
 5. (Optional) configure MCP servers from that previous menu - wolfram is available by default, but remote servers and local servers are supported
