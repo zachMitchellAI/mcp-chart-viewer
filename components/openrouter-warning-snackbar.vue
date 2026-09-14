@@ -19,26 +19,23 @@ span {
         rounded="pill"
         variant="tonal"
     >
-        <template>
-            <p>
-                <span
-                    >Hey! This app needs an openrouter api key to run. Grab one
-                    by
-                    <a href="https://openrouter.ai"
-                        >Visiting their site and registering!</a
-                    >
-                    (Click the settings icon on the top-right corner to
-                    set)</span
+        <p>
+            <span
+                >Hey! This app needs an openrouter api key to run.
+                <a href="https://openrouter.ai"
+                    >Grab one!</a
                 >
-                <VBtn
-                    variant="tonal"
-                    @click="snackbar = false"
-                    color="red-darken-1"
-                >
-                    Gotcha
-                </VBtn>
-            </p>
-        </template>
+                <br></br>
+                (Click the settings icon on the top-right corner to set)</span
+            >
+            <VBtn
+                variant="tonal"
+                @click="snackbar = false"
+                color="red-darken-1"
+            >
+                Gotcha
+            </VBtn>
+        </p>
     </VSnackbar>
 </template>
 
@@ -48,6 +45,7 @@ const snackbar = ref(false);
 onMounted(async () => {
     try {
         snackbar.value = await fetchNeedsApiKey();
+        console.log("Needs API key?", snackbar.value);
     } catch (error) {
         console.error("Failed to check API key status", error);
     }

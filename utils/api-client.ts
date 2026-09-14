@@ -44,10 +44,11 @@ export function saveUserSettings(
   });
 }
 
-export function fetchNeedsApiKey(): Promise<boolean> {
-  return $fetch<{ result: boolean }>(API_ENDPOINTS.NEEDS_API_KEY).then(
-    (response) => response.result,
+export async function fetchNeedsApiKey(): Promise<boolean> {
+  const response = await $fetch<{ result: boolean }>(
+    API_ENDPOINTS.NEEDS_API_KEY,
   );
+  return response.result;
 }
 
 export function askForDataset(
