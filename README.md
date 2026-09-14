@@ -158,6 +158,5 @@ Display the entire nutrition facts for "chicken". It must be a bar chart, should
 ![Fish](./gh-readme-assets/fish.png)
 ![Openrouter](./gh-readme-assets/openrouter.png)
 ![Openrouter 2](./gh-readme-assets/openrouter2.png)
-![Api Settings](./gh-readme-assets/api-settings.png)
 ![Tab Config](./gh-readme-assets/tab-config.png)
 ![Openrouter Config](./gh-readme-assets/openrouter-config.png)
