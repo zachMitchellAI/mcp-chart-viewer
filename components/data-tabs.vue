@@ -10,28 +10,30 @@
           {{ coll.name }}
         </v-tab>
       </v-tabs>
-
-      <v-btn
-        icon="mdi-plus"
-        variant="text"
-        color="primary"
-        aria-label="New tab"
-        class="mr-1"
-        @click="onCreateTab"
-      ></v-btn>
     </div>
-
-    <v-divider></v-divider>
 
     <div class="px-2 pt-1" v-if="chartData.activeCollection">
-      <v-btn
-        icon="mdi-cog-outline"
-        variant="text"
-        size="small"
-        aria-label="Configure active tab"
-        @click="onEditTab"
-      ></v-btn>
+      <div class="d-flex justify-space-between align-center w-100">
+        <v-btn
+          prepend-icon="mdi-cog-outline"
+          variant="text"
+          aria-label="Tab settings"
+          @click="onEditTab"
+        >
+          Configure
+        </v-btn>
+        <v-btn
+          prepend-icon="mdi-plus"
+          variant="text"
+          color="primary"
+          aria-label="New tab"
+          @click="onCreateTab"
+        >
+          New Tab
+        </v-btn>
+      </div>
     </div>
+    <v-divider></v-divider>
 
     <v-tabs-window v-model="tab">
       <v-tabs-window-item

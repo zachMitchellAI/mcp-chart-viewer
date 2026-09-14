@@ -139,7 +139,7 @@ async function onSave(): Promise<void> {
   const name = tabName.value.trim();
   const ids = [...selectedIds.value];
 
-  if (isCreate) {
+  if (isCreate.value) {
     const created = chartData.addCollection(name, ids);
     emit("saved", created);
   } else if (props.collection) {
